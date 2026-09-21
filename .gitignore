@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build outputs (kept locally / on server)
+client/dist/
+server/dist/
+
+# Local Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+
+# Local database data
+data/
+*.log
+npm-debug.log*
+yarn-debug.log*
+bun.lock
+
+# IDE & System files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Documentation / Scratch
+walkthrough.md

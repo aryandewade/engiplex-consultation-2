@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "start": "npx -y tsx src/index.ts",
     "build": "echo 'Build complete'",
     "seed": "bun src/scripts/seed.ts",
     "test": "bun test"

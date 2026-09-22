@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
 import { errorHandler } from './middleware/errorHandler';
@@ -28,6 +30,7 @@ const ASHISH_LINKEDIN_PFP =
 
 // Database connection
 connectDB().then(async () => {
+  if (mongoose.connection.readyState !== 1) return;
   try {
     await Consultant.updateMany(
       { name: { $regex: /Ashish/i } },
@@ -40,6 +43,7 @@ connectDB().then(async () => {
           skills: ['Career Roadmap', 'Resume Strategy', 'System Architecture', 'Interview Prep', 'Talent Mapping', 'Project Management', 'Data Analysis', 'Data Engineering', 'AI/ML', 'Automotive', 'Semiconductor', 'Software Engineering'],
           fee: 999,
           slotDuration: 60,
+          meetingLink: 'https://meet.google.com/ioy-bouu-eih',
         },
       }
     );
@@ -48,6 +52,17 @@ connectDB().then(async () => {
       { $set: { avatar: ASHISH_LINKEDIN_PFP } }
     );
     console.log('[Server] Ashish Lichode avatar and skills synced.');
+
+    // Sync all existing bookings in database to use the Google Meet link
+    await Booking.updateMany(
+      {},
+      {
+        $set: {
+          meetingLink: 'https://meet.google.com/ioy-bouu-eih',
+        },
+      }
+    );
+    console.log('[Server] Synced all bookings meetingLink to Google Meet (https://meet.google.com/ioy-bouu-eih).');
 
     // Database reviews cleanup: purge only previous automated test runs so genuine user reviews persist
     const testReviews = await Review.find({ userName: { $in: ['Tanvi Deshmukh', 'Aditi Deshpande', 'Automated Test'] } });
@@ -77,30 +92,41 @@ connectDB().then(async () => {
       }
     );
 
-    // Ensure client@example.com has a confirmed booking for demonstration / verified client testing
-    const demoClient = await User.findOne({ email: 'client@example.com' });
+    // Ensure mentor account for Ashish Lichode exists and is properly linked (ashish@engiplex.com / mentor@engiplex)
     const targetAshish = await Consultant.findOne({ name: { $regex: /Ashish/i } });
-    if (demoClient && targetAshish) {
-      const existingDemoBooking = await Booking.findOne({ userId: demoClient._id });
-      if (!existingDemoBooking) {
-        await Booking.create({
-          userId: demoClient._id,
-          consultantId: targetAshish._id,
-          date: '2026-09-15',
-          startTime: '19:00',
-          endTime: '19:20',
-          status: 'CONFIRMED',
-          paymentStatus: 'PAID',
-          amount: 999,
-          meetingLink: 'https://meet.google.com/xyz-demo-ashish',
-          receiptId: 'REC-DEMO-001',
-        });
-        console.log('[Server] Verified booking configured for client@example.com');
-      }
+    if (targetAshish) {
+      const passwordSalt = await bcrypt.genSalt(10);
+      const mentorHash = await bcrypt.hash('mentor@engiplex', passwordSalt);
 
-      // Clean up any previously seeded demonstration bookings on 2026-09-16 so slots remain open
-      await Booking.deleteMany({ receiptId: { $regex: /^REC-FULL-/ } });
+      let mentorUser = await User.findOne({
+        email: { $in: ['ashish@engiplex.com', 'ashish.lichode@consultflow.org'] },
+      });
+
+      if (!mentorUser) {
+        mentorUser = await User.create({
+          name: targetAshish.name || 'Ashish Lichode',
+          email: 'ashish@engiplex.com',
+          phone: targetAshish.phone || '+91 98201 11223',
+          passwordHash: mentorHash,
+          role: 'CONSULTANT',
+          consultantId: targetAshish._id,
+          avatar: targetAshish.avatar,
+        });
+        console.log('[Server] Created mentor user account for ashish@engiplex.com');
+      } else {
+        mentorUser.name = targetAshish.name || 'Ashish Lichode';
+        mentorUser.email = 'ashish@engiplex.com';
+        mentorUser.passwordHash = mentorHash;
+        mentorUser.role = 'CONSULTANT';
+        mentorUser.consultantId = targetAshish._id;
+        mentorUser.avatar = targetAshish.avatar;
+        await mentorUser.save();
+        console.log('[Server] Updated mentor user credentials for ashish@engiplex.com');
+      }
     }
+
+    // Clean up any stale demonstration bookings so slots remain open
+    await Booking.deleteMany({ receiptId: { $regex: /^REC-FULL-/ } });
   } catch (err) {
     console.error('[Server] Failed during startup sync:', err);
   }

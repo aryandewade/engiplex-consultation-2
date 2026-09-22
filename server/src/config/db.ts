@@ -9,16 +9,29 @@ try {
   // Ignore if custom DNS cannot be set
 }
 
+// Buffer commands during brief network reconnects instead of failing after 2.5s
+mongoose.set('bufferTimeoutMS', 20000);
+
 export const connectDB = async (): Promise<void> => {
   if (mongoose.connection.readyState === 1) return;
   try {
     const conn = await mongoose.connect(ENV.MONGODB_URI, {
       serverSelectionTimeoutMS: 15000,
+      socketTimeoutMS: 45000,
     });
     console.log(`[Database] MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error('[Database] Connection failed:', error);
-    // Do not exit immediately; keep server active and retry
-    setTimeout(connectDB, 5000);
+    // Keep retrying in background
+    setTimeout(connectDB, 3000);
   }
 };
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[Database] MongoDB disconnected. Attempting reconnect...');
+  connectDB();
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('[Database] MongoDB error:', err);
+});

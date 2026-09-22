@@ -23,6 +23,7 @@ import {
   XCircle,
   AlertCircle,
   HelpCircle,
+  ChevronLeft,
 } from 'lucide-react';
 
 interface TermsAndConditionsProps {
@@ -43,12 +44,12 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onNaviga
 
   return (
     <div className="w-[94%] sm:w-[82%] max-w-5xl mx-auto py-8 sm:py-12 space-y-10 animate-fade-in text-zinc-900">
-      {/* Back button */}
+      {/* Back to home button */}
       <button
-        onClick={() => onNavigate('/consultants')}
-        className="inline-flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-zinc-900 hover:underline cursor-pointer transition-colors"
+        onClick={() => onNavigate('/')}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ChevronLeft className="w-4 h-4" />
         <span>Back to Home</span>
       </button>
 
@@ -173,7 +174,7 @@ export const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onNaviga
               <strong className="text-zinc-900">3.3 Instant Delivery of Session Details:</strong> Booking confirmations, official tax receipts, and the unique Google Meet appointment link are delivered to you immediately via on-screen receipt and email after successful payment.
             </p>
             <p>
-              <strong className="text-zinc-900">3.4 Transparent Pricing:</strong> Prices for consultation sessions are as displayed on the Platform at the time of booking (e.g., standard ₹999/- per hour, or ₹0 for verified students using valid coupon codes) and are subject to change for future bookings without affecting sessions already booked and paid for.
+              <strong className="text-zinc-900">3.4 Transparent Pricing:</strong> Prices for consultation sessions are as displayed on the Platform at the time of booking (e.g., standard ₹999/- per hour, or Pay What You Can for verified students using valid coupon codes) and are subject to change for future bookings without affecting sessions already booked and paid for.
             </p>
           </div>
         </section>

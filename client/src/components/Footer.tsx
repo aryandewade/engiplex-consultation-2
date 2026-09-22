@@ -76,6 +76,13 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             >
               Terms &amp; Conditions
             </button>
+            <span>•</span>
+            <button
+              onClick={() => onNavigate ? onNavigate('/login') : (window.location.href = '/login')}
+              className="text-emerald-700 font-bold hover:underline transition-colors cursor-pointer"
+            >
+              Mentor Portal
+            </button>
           </div>
         </div>
       </div>

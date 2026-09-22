@@ -5,9 +5,10 @@ export const ENV = {
     'mongodb+srv://engiplexservices_db_user:HrTSNulelrkzztqY@cluster0.pxpeum4.mongodb.net/consultflow?retryWrites=true&w=majority&appName=Cluster0',
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   JWT_SECRET: process.env.JWT_SECRET || 'consultflow_super_secret_jwt_key_2026',
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_consultflow_demo_key',
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || 'rzp_secret_demo_consultflow_secret',
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_TZ6ZiC4bWbn52f',
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || 'cBBwDFrtWlaEvDRv3zX3nsrG',
   RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_webhook_secret_consultflow_2026',
+  GOOGLE_MEET_LINK: process.env.GOOGLE_MEET_LINK || 'https://meet.google.com/ioy-bouu-eih',
   EMAIL_FROM: process.env.EMAIL_FROM || 'engiplexservices@gmail.com',
   EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || 'ENGIPLEX Consultation',
   EMAIL_API_KEY:

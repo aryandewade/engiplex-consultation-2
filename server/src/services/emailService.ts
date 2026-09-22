@@ -30,6 +30,9 @@ if (ENV.SMTP_HOST && ENV.SMTP_USER) {
         user: ENV.SMTP_USER,
         pass: ENV.SMTP_PASS,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
   } catch (err) {
     console.warn('[Email] SMTP configuration invalid, using mock email sender.');
@@ -37,79 +40,88 @@ if (ENV.SMTP_HOST && ENV.SMTP_USER) {
 }
 
 export const sendEmail = async (payload: EmailPayload): Promise<boolean> => {
-  const emailRecord = {
-    id: 'mail_' + Math.random().toString(36).substring(2, 9),
-    to: payload.to,
-    subject: payload.subject,
-    sentAt: new Date(),
-    html: payload.html,
-    receiptId: payload.receiptId,
-  };
+  try {
+    const emailRecord = {
+      id: 'mail_' + Math.random().toString(36).substring(2, 9),
+      to: payload.to,
+      subject: payload.subject,
+      sentAt: new Date(),
+      html: payload.html,
+      receiptId: payload.receiptId,
+    };
 
-  sentEmailsLog.unshift(emailRecord);
-  if (sentEmailsLog.length > 50) sentEmailsLog.pop();
+    sentEmailsLog.unshift(emailRecord);
+    if (sentEmailsLog.length > 50) sentEmailsLog.pop();
 
-  console.log(`\n======================================================`);
-  console.log(`[EMAIL DISPATCHED] To: ${payload.to} | Subject: ${payload.subject}`);
-  if (payload.receiptId) console.log(`[Receipt ID]: ${payload.receiptId}`);
-  console.log(`======================================================\n`);
+    console.log(`\n======================================================`);
+    console.log(`[EMAIL DISPATCHED] To: ${payload.to} | Subject: ${payload.subject}`);
+    if (payload.receiptId) console.log(`[Receipt ID]: ${payload.receiptId}`);
+    console.log(`======================================================\n`);
 
-  // 1. Send via Brevo HTTP API (Fastest & most reliable)
-  const brevoApiKey = ENV.BREVO_API_KEY || ENV.EMAIL_API_KEY;
-  if (brevoApiKey && brevoApiKey.startsWith('xkeysib-')) {
-    try {
-      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': brevoApiKey,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          sender: {
-            name: ENV.EMAIL_FROM_NAME || 'ENGIPLEX Consultation',
-            email: ENV.EMAIL_FROM || 'engiplexservices@gmail.com',
+    // 1. Send via Brevo HTTP API (Fastest & most reliable)
+    const brevoApiKey = ENV.BREVO_API_KEY || ENV.EMAIL_API_KEY;
+    if (brevoApiKey && brevoApiKey.startsWith('xkeysib-')) {
+      try {
+        const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
-          to: [
-            {
-              email: payload.to,
+          body: JSON.stringify({
+            sender: {
+              name: 'Engiplex Consultancy',
+              email: 'engiplexservices@gmail.com',
             },
-          ],
-          subject: payload.subject,
-          htmlContent: payload.html,
-        }),
-      });
+            to: [
+              {
+                email: payload.to.trim(),
+              },
+            ],
+            replyTo: {
+              name: 'Engiplex Consultancy',
+              email: 'engiplexservices@gmail.com',
+            },
+            subject: payload.subject,
+            htmlContent: payload.html,
+          }),
+        });
 
-      const brevoData: any = await brevoRes.json().catch(() => ({}));
-      if (brevoRes.ok && brevoData.messageId) {
-        console.log(`[Brevo Email Sent Successfully] Message ID: ${brevoData.messageId}`);
-        return true;
-      } else {
-        console.warn('[Brevo API Warning]', brevoData);
+        const brevoData: any = await brevoRes.json().catch(() => ({}));
+        if (brevoRes.ok && brevoData.messageId) {
+          console.log(`[Brevo Email Sent Successfully] Message ID: ${brevoData.messageId} to ${payload.to}`);
+          return true;
+        } else {
+          console.warn('[Brevo API Warning]', brevoData);
+        }
+      } catch (brevoErr) {
+        console.error('[Brevo Email Error]', brevoErr);
       }
-    } catch (brevoErr) {
-      console.error('[Brevo Email Error]', brevoErr);
     }
-  }
 
-  // 2. Fallback to Nodemailer SMTP
-  if (transporter) {
-    try {
-      await transporter.sendMail({
-        from: `"${ENV.EMAIL_FROM_NAME || 'ENGIPLEX Consultation'}" <${ENV.EMAIL_FROM}>`,
-        to: payload.to,
-        subject: payload.subject,
-        html: payload.html,
-      });
-      console.log('[SMTP Email Sent Successfully]');
-      return true;
-    } catch (error) {
-      console.error('[Email] Failed to send email via SMTP:', error);
-      return false;
+    // 2. Fallback to Nodemailer SMTP
+    if (transporter) {
+      try {
+        await transporter.sendMail({
+          from: `"${ENV.EMAIL_FROM_NAME || 'ENGIPLEX Consultation'}" <${ENV.EMAIL_FROM}>`,
+          to: payload.to.trim(),
+          subject: payload.subject,
+          html: payload.html,
+        });
+        console.log('[SMTP Email Sent Successfully]');
+        return true;
+      } catch (error) {
+        console.error('[Email] Failed to send email via SMTP:', error);
+        return false;
+      }
     }
-  }
 
-  return true;
+    return true;
+  } catch (globalEmailErr) {
+    console.error('[Email] Unexpected error during sendEmail:', globalEmailErr);
+    return false;
+  }
 };
 
 // Email Templates
@@ -124,6 +136,10 @@ export const buildBookingConfirmationEmail = (data: {
   bookingId: string;
   meetingLink: string;
 }): string => {
+  const meetLink = (data.meetingLink && !data.meetingLink.includes('jit.si'))
+    ? data.meetingLink
+    : (ENV.GOOGLE_MEET_LINK || 'https://meet.google.com/ioy-bouu-eih');
+
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #09090b; color: #f4f4f5; padding: 32px; border-radius: 16px; border: 1px solid #27272a;">
       <div style="text-align: center; margin-bottom: 24px;">
@@ -148,11 +164,11 @@ export const buildBookingConfirmationEmail = (data: {
           </tr>
           <tr>
             <td style="color: #a1a1aa; padding: 6px 0;">Duration:</td>
-            <td style="color: #f4f4f5; font-weight: 600; text-align: right;">1 hour</td>
+            <td style="color: #f4f4f5; font-weight: 600; text-align: right;">1 session</td>
           </tr>
           <tr>
             <td style="color: #a1a1aa; padding: 6px 0;">Amount Paid:</td>
-            <td style="color: #10b981; font-weight: 700; text-align: right;">₹${data.amount}</td>
+            <td style="color: #10b981; font-weight: 700; text-align: right;">${data.amount === 0 ? 'Pay What You Can' : `₹${data.amount}`}</td>
           </tr>
           <tr>
             <td style="color: #a1a1aa; padding: 6px 0;">Receipt ID:</td>
@@ -161,9 +177,17 @@ export const buildBookingConfirmationEmail = (data: {
         </table>
       </div>
 
-      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 16px; text-align: center; margin-bottom: 24px;">
-        <p style="color: #a1a1aa; font-size: 13px; margin: 0 0 8px 0;">Your Secure Video Meeting Room:</p>
-        <a href="${data.meetingLink}" style="display: inline-block; background: #10b981; color: #000; font-weight: 600; padding: 10px 24px; border-radius: 9999px; text-decoration: none; font-size: 14px;">Join Video Meeting</a>
+      <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+        <div style="display: inline-block; background: #27272a; padding: 4px 12px; border-radius: 9999px; font-size: 12px; color: #10b981; font-weight: 600; margin-bottom: 10px;">
+          Google Meet Live Video Room
+        </div>
+        <p style="color: #d4d4d8; font-size: 13px; margin: 0 0 12px 0;">Join the session at your scheduled time using Google Meet:</p>
+        <p style="margin: 0 0 16px 0;">
+          <a href="${meetLink}" style="color: #38bdf8; font-weight: 600; font-size: 15px; text-decoration: underline;">${meetLink}</a>
+        </p>
+        <a href="${meetLink}" style="display: inline-block; background: #10b981; color: #000000; font-weight: 700; padding: 12px 28px; border-radius: 9999px; text-decoration: none; font-size: 14px;">
+          Join Google Meet
+        </a>
       </div>
 
       <div style="font-size: 12px; color: #71717a; line-height: 1.6; border-top: 1px solid #27272a; padding-top: 16px;">
@@ -183,6 +207,10 @@ export const buildRescheduleEmail = (data: {
   newTime: string;
   meetingLink: string;
 }): string => {
+  const meetLink = (data.meetingLink && !data.meetingLink.includes('jit.si'))
+    ? data.meetingLink
+    : (ENV.GOOGLE_MEET_LINK || 'https://meet.google.com/ioy-bouu-eih');
+
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #09090b; color: #f4f4f5; padding: 32px; border-radius: 16px; border: 1px solid #27272a;">
       <h2 style="color: #38bdf8; margin-top: 0;">Consultation Rescheduled</h2>
@@ -193,8 +221,11 @@ export const buildRescheduleEmail = (data: {
         <p style="color: #10b981; font-weight: 600; margin: 0; font-size: 15px;">New Schedule: ${data.newDate} at ${data.newTime}</p>
       </div>
 
-      <p style="font-size: 14px; color: #a1a1aa;">The meeting link remains active for the new scheduled slot:</p>
-      <p><a href="${data.meetingLink}" style="color: #38bdf8;">${data.meetingLink}</a></p>
+      <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0;">
+        <p style="font-size: 13px; color: #a1a1aa; margin: 0 0 8px 0;">Google Meet Session Link:</p>
+        <p style="margin: 0 0 12px 0;"><a href="${meetLink}" style="color: #38bdf8; font-weight: 600;">${meetLink}</a></p>
+        <a href="${meetLink}" style="display: inline-block; background: #38bdf8; color: #000; font-weight: 700; padding: 10px 24px; border-radius: 9999px; text-decoration: none; font-size: 14px;">Join Google Meet</a>
+      </div>
     </div>
   `;
 };

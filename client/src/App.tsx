@@ -72,7 +72,10 @@ const AppContent: React.FC = () => {
       return <ConsultantProfile consultantId={profileMatch[1]} onNavigate={navigate} />;
     }
 
-    // Booking Flow: /book/:consultantId
+    // Booking Flow: /book/:consultantId or /book
+    if (path === '/book' || path === '/book/') {
+      return <BookingFlow consultantId="65fa00000000000000000001" onNavigate={navigate} />;
+    }
     const bookMatch = path.match(/^\/book\/([a-zA-Z0-9_-]+)$/);
     if (bookMatch) {
       return <BookingFlow consultantId={bookMatch[1]} onNavigate={navigate} />;

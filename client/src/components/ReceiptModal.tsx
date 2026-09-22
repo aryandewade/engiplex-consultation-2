@@ -108,14 +108,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ isOpen, onClose, boo
               <span className="text-zinc-500">Payment / Auth</span>
               <span className="font-mono text-zinc-700 print:text-black">
                 {booking.promoCode === 'Engistud' || booking.isVerifiedStudent
-                  ? 'WAIVER: Student Fee Waiver'
+                  ? 'Pay What You Can (Student Initiative)'
                   : (booking.razorpayPaymentId || 'pay_verified')}
               </span>
             </div>
             <div className="flex justify-between py-1 pt-2 text-sm">
               <span className="font-bold text-zinc-900 print:text-black">Total Paid</span>
               <span className="font-black text-emerald-700">
-                {booking.amount === 0 ? '₹0 (FREE)' : `₹${booking.amount}/-`}
+                {booking.amount === 0 ? 'Pay What You Can' : `₹${booking.amount}/-`}
               </span>
             </div>
           </div>

@@ -70,7 +70,7 @@ export const getTodaySchedule = async (req: AuthenticatedRequest, res: Response,
 
     // Build timeline grouped by consultant
     const scheduleByConsultant = consultants.map((c) => {
-      const baseSlots = generateDefaultSlots(c.workingHours.start, c.workingHours.end, c.slotDuration || 60);
+      const baseSlots = generateDefaultSlots();
       const cBookings = bookings.filter((b) => b.consultantId?._id?.toString() === c._id.toString());
       const cBlocks = blockedSlots.filter((b) => b.consultantId.toString() === c._id.toString());
       const isFullDayBlocked = cBlocks.some((b) => b.isFullDay);
@@ -80,15 +80,16 @@ export const getTodaySchedule = async (req: AuthenticatedRequest, res: Response,
         const block = cBlocks.find((b) => b.startTime === startTime);
 
         if (booking) {
+          const userObj = booking.userId as any;
           return {
             startTime,
             endTime,
             status: 'Booked',
             booking: {
               id: booking._id,
-              customerName: booking.userId?.name || 'Customer',
-              customerEmail: booking.userId?.email || '',
-              customerPhone: booking.userId?.phone || '',
+              customerName: userObj?.name || 'Customer',
+              customerEmail: userObj?.email || '',
+              customerPhone: userObj?.phone || '',
               paymentStatus: booking.paymentStatus,
               status: booking.status,
               receiptId: booking.receiptId,
@@ -163,15 +164,18 @@ export const blockSlot = async (req: AuthenticatedRequest, res: Response, next: 
         success: false,
         hasConflict: true,
         message: 'This slot already has an active customer booking. Please reschedule or cancel the booking first.',
-        conflictBookings: existingBookings.map((b) => ({
-          id: b._id,
-          customerName: b.userId?.name,
-          customerEmail: b.userId?.email,
-          customerPhone: b.userId?.phone,
-          startTime: b.startTime,
-          endTime: b.endTime,
-          date: b.date,
-        })),
+        conflictBookings: existingBookings.map((b) => {
+          const u = b.userId as any;
+          return {
+            id: b._id,
+            customerName: u?.name,
+            customerEmail: u?.email,
+            customerPhone: u?.phone,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            date: b.date,
+          };
+        }),
       });
       return;
     }
@@ -221,13 +225,16 @@ export const getAllBookings = async (req: AuthenticatedRequest, res: Response, n
 
     if (search && typeof search === 'string' && search.trim()) {
       const q = search.toLowerCase().trim();
-      bookings = bookings.filter(
-        (b) =>
-          b.userId?.name?.toLowerCase().includes(q) ||
-          b.userId?.email?.toLowerCase().includes(q) ||
-          b.consultantId?.name?.toLowerCase().includes(q) ||
+      bookings = bookings.filter((b) => {
+        const u = b.userId as any;
+        const c = b.consultantId as any;
+        return (
+          u?.name?.toLowerCase().includes(q) ||
+          u?.email?.toLowerCase().includes(q) ||
+          c?.name?.toLowerCase().includes(q) ||
           b.receiptId?.toLowerCase().includes(q)
-      );
+        );
+      });
     }
 
     res.json({

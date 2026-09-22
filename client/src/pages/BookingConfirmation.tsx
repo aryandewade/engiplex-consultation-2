@@ -14,6 +14,9 @@ import {
   User,
   Copy,
   Check,
+  Printer,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 
 interface ConfirmationProps {
@@ -50,12 +53,12 @@ const formatDisplayDate = (dateStr?: string) => {
 export const BookingConfirmation: React.FC<ConfirmationProps> = ({ bookingId, onNavigate }) => {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchBooking();
-    // Confetti effect
+    // Confetti celebration
     confetti({
       particleCount: 80,
       spread: 70,
@@ -82,22 +85,29 @@ export const BookingConfirmation: React.FC<ConfirmationProps> = ({ bookingId, on
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading || !booking) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center text-zinc-400">
-        Loading confirmation details...
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-zinc-500 text-sm">Loading confirmed appointment details...</p>
       </div>
     );
   }
 
   const consultant = typeof booking.consultantId === 'object' ? booking.consultantId : null;
   const customer = typeof booking.userId === 'object' ? booking.userId : null;
-  const customerEmail = customer?.email || '';
+  const customerName = customer?.name || (booking as any).clientName || (booking as any).userName || 'Client';
+  const customerEmail = customer?.email || (booking as any).clientEmail || (booking as any).userEmail || '';
+  const isStudentPass = booking.amount === 0 || booking.isVerifiedStudent || booking.promoCode === 'Engistud';
 
   return (
-    <div className="w-[94%] sm:w-[82%] max-w-4xl mx-auto px-2 sm:px-4 py-12 space-y-8 animate-fade-in">
-      {/* Success Badge & Headline */}
-      <div className="text-center space-y-3">
+    <div className="w-[94%] sm:w-[82%] max-w-4xl mx-auto px-2 sm:px-4 py-10 space-y-8 animate-fade-in">
+      {/* Top Banner */}
+      <div className="text-center space-y-3 print:hidden">
         <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto text-emerald-600 shadow-sm">
           <CheckCircle2 className="w-8 h-8 text-emerald-600" />
         </div>
@@ -105,135 +115,205 @@ export const BookingConfirmation: React.FC<ConfirmationProps> = ({ bookingId, on
         <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
           Appointment Officially Confirmed!
         </h1>
-        <p className="text-xs sm:text-sm text-zinc-600 max-w-md mx-auto leading-relaxed">
-          {booking.amount === 0 || booking.isVerifiedStudent
-            ? 'Your complimentary student consultation (100% Fee Waived) is confirmed and your 1-on-1 slot is securely locked.'
+        <p className="text-xs sm:text-sm text-zinc-600 max-w-lg mx-auto leading-relaxed">
+          {isStudentPass
+            ? 'Your Pay What You Can consultation (Student / Fresher Pass) is confirmed and your 1-on-1 slot is securely locked.'
             : `Your payment of ₹${booking.amount} has been verified and your 1-on-1 slot is securely locked.`}{' '}
-          {customerEmail ? (
+          {customerEmail && (
             <span>
-              Official receipt, invoice, and Google Meet invite have been dispatched to{' '}
+              Confirmation email and Google Meet invite have been dispatched to{' '}
               <strong className="text-zinc-900 font-semibold">{customerEmail}</strong>.
             </span>
-          ) : (
-            <span>Confirmation and calendar invite details have been dispatched to your email.</span>
           )}
         </p>
       </div>
 
-      {/* Main Confirmation Card */}
-      <div className="p-6 sm:p-8 rounded-2xl bg-white border border-zinc-200 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-5">
-          <div className="flex items-center gap-3.5">
-            <div className="relative inline-block shrink-0">
-              <img
-                src={consultant?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=mentor'}
-                alt={consultant?.name}
-                className="w-12 h-12 rounded-xl object-cover border border-zinc-200"
-              />
-              <ShieldCheck
-                className="absolute top-0.5 right-0.5 w-3.5 h-3.5 text-emerald-400 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)] pointer-events-none"
-                aria-label="Verified Mentor"
-              />
+      {/* Quick Meeting Action Callout */}
+      <div className="p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/90 shadow-sm space-y-3 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-800">
+              <Video className="w-4 h-4 text-emerald-700" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-zinc-900 text-sm">{consultant?.name}</span>
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              </div>
-              <p className="text-xs text-emerald-700 font-medium">{consultant?.domain}</p>
+              <span className="font-bold text-xs sm:text-sm text-emerald-950 block">Google Meet Live Room</span>
+              <span className="text-[11px] text-emerald-700">Join with mentor {consultant?.name || 'Ashish'} at scheduled time</span>
             </div>
           </div>
-
-          <div className="text-right">
-            <span className="text-[10px] text-zinc-400 uppercase tracking-wider block">Official Receipt</span>
-            <span className="font-mono text-xs font-semibold text-zinc-700">{booking.receiptId}</span>
-            {booking.isVerifiedStudent && (
-              <span className="text-[10px] text-emerald-700 font-semibold block">🎓 Verified Student Waiver</span>
-            )}
-          </div>
+          <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900 border border-emerald-300 w-fit">
+            Active Video Link
+          </span>
         </div>
 
-        {/* Schedule grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Confirmed Date</span>
-            </div>
-            <p className="text-sm font-semibold text-zinc-900">{formatDisplayDate(booking.date)}</p>
-          </div>
+        <div className="flex items-center justify-between gap-2 bg-white p-2.5 rounded-xl border border-zinc-200 text-xs font-mono text-zinc-700">
+          <span className="truncate">{booking.meetingLink || 'https://meet.google.com/ioy-bouu-eih'}</span>
+          <button
+            onClick={handleCopyLink}
+            className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900 transition-colors shrink-0 flex items-center gap-1 text-[11px] font-sans font-medium"
+            title="Copy Meeting URL"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-emerald-700 font-bold">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
 
-          <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-1">
-            <div className="flex items-center gap-2 text-xs text-zinc-500">
-              <Clock className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Session Time & Duration</span>
-            </div>
-            <p className="text-sm font-semibold text-zinc-900">
-              {booking.startTime} – {booking.endTime} (20 Min Focused Session)
+        <a
+          href={booking.meetingLink || 'https://meet.google.com/ioy-bouu-eih'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+        >
+          <span>Join Google Meet</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
+      {/* EMBEDDED OFFICIAL RECEIPT & TAX INVOICE */}
+      <div className="bg-white border-2 border-zinc-200 rounded-3xl shadow-lg p-6 sm:p-10 space-y-6 text-zinc-900 print:border-none print:shadow-none print:p-0">
+        {/* Receipt Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-200 pb-6">
+          <div className="space-y-1">
+            <img
+              src="/engiplex-logo.png"
+              alt="ENGIPLEX Consultation"
+              className="h-10 sm:h-12 w-auto object-contain"
+            />
+            <p className="text-xs text-zinc-500 font-medium">
+              Official Consultation Tax Invoice &amp; Verification Receipt
             </p>
           </div>
+
+          <div className="text-left sm:text-right space-y-1">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              {isStudentPass ? 'VERIFIED • PAY WHAT YOU CAN' : 'PAID & CONFIRMED'}
+            </span>
+            <div className="font-mono text-xs font-bold text-zinc-700 block">
+              Receipt ID: <span className="text-zinc-900">{booking.receiptId || 'REC-CONFIRMED'}</span>
+            </div>
+            <div className="text-[11px] text-zinc-400">
+              Issue Date: {new Date().toLocaleDateString('en-GB')}
+            </div>
+          </div>
         </div>
 
-        {/* Video Meeting Room Callout */}
-        <div className="p-5 rounded-xl bg-emerald-50/60 border border-emerald-200 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-900">
-              <Video className="w-4 h-4 text-emerald-600" />
-              <span>Secure Video Meeting Room</span>
-            </div>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-              Active Link
+        {/* Client & Consultant Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs bg-zinc-50/70 p-4 sm:p-5 rounded-2xl border border-zinc-200">
+          <div>
+            <span className="text-zinc-400 uppercase tracking-wider font-bold text-[10px] block mb-1">
+              Billed To (Client / Student)
             </span>
+            <p className="font-bold text-zinc-900 text-sm">{customerName}</p>
+            {customerEmail && <p className="text-zinc-600 font-medium">{customerEmail}</p>}
+            {booking.collegeName && (
+              <p className="text-emerald-800 text-[11px] font-semibold mt-1">
+                🎓 {booking.collegeName} {booking.graduationYear ? `(Class of ${booking.graduationYear})` : ''}
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center justify-between gap-2 bg-white p-2.5 rounded-xl border border-zinc-200 text-xs font-mono text-zinc-700">
-            <span className="truncate">{booking.meetingLink}</span>
+          <div>
+            <span className="text-zinc-400 uppercase tracking-wider font-bold text-[10px] block mb-1">
+              Consultant / Advisor
+            </span>
+            <p className="font-bold text-zinc-900 text-sm">{consultant?.name || 'Ashish Lichode'}</p>
+            <p className="text-zinc-600 font-medium">{consultant?.domain || 'Engineering Consultant'}</p>
+            <p className="text-[11px] text-emerald-700 font-semibold">Verified Advisor • ENGIPLEX</p>
+          </div>
+        </div>
+
+        {/* Line Items Table */}
+        <div className="space-y-3">
+          <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Appointment Summary</h3>
+          <div className="border border-zinc-200 rounded-2xl overflow-hidden text-xs">
+            <div className="bg-zinc-100 px-4 py-2.5 font-bold text-zinc-700 grid grid-cols-12 gap-2">
+              <span className="col-span-6">Description</span>
+              <span className="col-span-3 text-center">Schedule</span>
+              <span className="col-span-3 text-right">Amount</span>
+            </div>
+
+            <div className="px-4 py-3.5 divide-y divide-zinc-100">
+              <div className="grid grid-cols-12 gap-2 py-1 items-center">
+                <div className="col-span-6">
+                  <p className="font-bold text-zinc-900 text-xs sm:text-sm">
+                    1-on-1 Engineering Consultation
+                  </p>
+                  <p className="text-zinc-500 text-[11px]">
+                    Career Roadmap, Resume Strategy &amp; Technical Mentorship (20 Min Focused Session)
+                  </p>
+                </div>
+                <div className="col-span-3 text-center text-zinc-700 font-medium">
+                  <div>{formatDisplayDate(booking.date)}</div>
+                  <div className="text-zinc-500 text-[11px] font-mono">{booking.startTime} – {booking.endTime}</div>
+                </div>
+                <div className="col-span-3 text-right font-bold text-zinc-900 text-xs sm:text-sm">
+                  {isStudentPass ? 'Pay What You Can' : `₹${booking.amount}.00`}
+                </div>
+              </div>
+            </div>
+
+            {/* Total Row */}
+            <div className="bg-zinc-50 border-t border-zinc-200 px-4 py-3 flex justify-between items-center text-xs sm:text-sm">
+              <span className="font-bold text-zinc-800">
+                {isStudentPass ? 'Total Amount (Student / Fresher Pass)' : 'Total Amount Paid'}
+              </span>
+              <span className="font-black text-emerald-700 text-base sm:text-lg">
+                {isStudentPass ? 'Pay What You Can' : `₹${booking.amount}/-`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Security & Verification Footer */}
+        <div className="pt-4 border-t border-zinc-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-[11px] text-zinc-500">
+          <div className="space-y-0.5">
+            <p className="font-semibold text-zinc-700 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Verified Electronic Invoice — DPDP 2023 &amp; IT Act Compliant
+            </p>
+            <p>Meeting link dispatched to: {customerEmail || 'your email'}</p>
+          </div>
+
+          <div className="flex items-center gap-2 print:hidden">
             <button
-              onClick={handleCopyLink}
-              className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-zinc-800 transition-colors shrink-0"
-              title="Copy Meeting URL"
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print / Save PDF Receipt</span>
             </button>
           </div>
-
-          <a
-            href={booking.meetingLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-          >
-            <span>Launch Video Room</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
-
-        {/* Actions bar */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button
-            onClick={() => setIsReceiptOpen(true)}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold flex items-center justify-center gap-2 transition-colors border border-zinc-300"
-          >
-            <FileText className="w-4 h-4 text-zinc-600" />
-            <span>Download / Print Receipt</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('/')}
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <span>Back to Mentors</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* Official Printable Receipt Modal */}
+      {/* Navigation Footer */}
+      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
+        <button
+          onClick={() => onNavigate('/')}
+          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-zinc-300"
+        >
+          <span>Back to Home</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Modal fallback */}
       <ReceiptModal
-        isOpen={isReceiptOpen}
-        onClose={() => setIsReceiptOpen(false)}
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
         booking={booking}
       />
     </div>
   );
 };
+
+export default BookingConfirmation;

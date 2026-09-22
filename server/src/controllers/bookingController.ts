@@ -7,10 +7,14 @@ import {
   verifyAndConfirmBooking,
   rescheduleBooking,
   cancelBooking,
+  inMemoryBookingsMap,
+  inMemoryUsersMap,
+  DEFAULT_ASHISH_CONSULTANT,
 } from '../services/bookingService';
 import { Booking } from '../models/Booking';
 import { User } from '../models/User';
 import { signToken } from '../utils/jwt';
+import mongoose from 'mongoose';
 
 const reserveSchema = z.object({
   consultantId: z.string().min(1, 'Consultant ID is required'),
@@ -25,7 +29,7 @@ const reserveSchema = z.object({
   collegeName: z.string().optional(),
   studentYear: z.string().optional(),
   stream: z.string().optional(),
-  graduationYear: z.number().optional(),
+  graduationYear: z.union([z.number(), z.string().transform((v) => parseInt(v, 10))]).optional(),
   studentIdCardUrl: z.string().optional(),
 });
 
@@ -45,7 +49,7 @@ const rescheduleSchema = z.object({
 export const reserve = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const body = reserveSchema.parse(req.body);
-    let userId = req.user?.userId;
+    let userId: string = req.user?.userId || '';
     let userToken: string | undefined;
     let userData: any;
 
@@ -59,19 +63,42 @@ export const reserve = async (req: AuthenticatedRequest, res: Response, next: Ne
       }
 
       const email = body.clientEmail.toLowerCase().trim();
-      let user = await User.findOne({ email });
+      const isDbConnected = mongoose.connection.readyState === 1;
+
+      let user: any = null;
+      if (isDbConnected) {
+        try {
+          user = await Promise.race([
+            User.findOne({ email }),
+            new Promise<null>((_, reject) => setTimeout(() => reject(new Error('DB Timeout')), 2500)),
+          ]);
+          if (!user) {
+            user = await User.create({
+              name: body.clientName.trim(),
+              email,
+              phone: body.clientPhone?.trim() || '9999999999',
+              passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
+              role: 'USER',
+            });
+          } else if (body.clientName && (!user.name || user.name === 'Client')) {
+            user.name = body.clientName.trim();
+            await user.save();
+          }
+        } catch (dbErr) {
+          console.warn('[Booking] MongoDB user operation deferred:', dbErr);
+        }
+      }
 
       if (!user) {
-        user = await User.create({
+        const fallbackUserId = new mongoose.Types.ObjectId().toString();
+        user = {
+          _id: fallbackUserId,
           name: body.clientName.trim(),
           email,
           phone: body.clientPhone?.trim() || '9999999999',
-          passwordHash: await bcrypt.hash(Math.random().toString(36), 10),
           role: 'USER',
-        });
-      } else if (body.clientName && (!user.name || user.name === 'Client')) {
-        user.name = body.clientName.trim();
-        await user.save();
+        };
+        inMemoryUsersMap.set(fallbackUserId, user);
       }
 
       userId = user._id.toString();
@@ -106,7 +133,7 @@ export const reserve = async (req: AuthenticatedRequest, res: Response, next: Ne
     res.status(201).json({
       success: true,
       message: (result as any).isFreeStudentBooking
-        ? 'Student / Fresher status verified! Your free session is confirmed.'
+        ? 'Student / Fresher status verified! Your Pay What You Can session is confirmed.'
         : 'Slot temporarily reserved. Please complete payment to confirm.',
       data: {
         ...result,
@@ -122,15 +149,23 @@ export const reserve = async (req: AuthenticatedRequest, res: Response, next: Ne
 export const confirm = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const body = confirmSchema.parse(req.body);
-    let userId = req.user?.userId;
+    let userId: string = req.user?.userId || '';
 
     if (!userId) {
-      const bookingDoc = await Booking.findById(body.bookingId);
+      let bookingDoc: any = null;
+      if (mongoose.connection.readyState === 1) {
+        try {
+          bookingDoc = await Booking.findById(body.bookingId);
+        } catch (e) { }
+      }
+      if (!bookingDoc) {
+        bookingDoc = inMemoryBookingsMap.get(body.bookingId);
+      }
       if (!bookingDoc) {
         res.status(404).json({ success: false, message: 'Booking not found.' });
         return;
       }
-      userId = bookingDoc.userId.toString();
+      userId = (bookingDoc.userId?._id || bookingDoc.userId || 'usr_guest').toString();
     }
 
     const result = await verifyAndConfirmBooking({
@@ -155,7 +190,17 @@ export const getBookingById = async (req: AuthenticatedRequest, res: Response, n
   try {
     const { id } = req.params;
 
-    const booking = await Booking.findById(id).populate('consultantId userId');
+    let booking: any = null;
+    if (mongoose.connection.readyState === 1) {
+      try {
+        booking = await Booking.findById(id).populate('consultantId userId');
+      } catch (e) { }
+    }
+
+    if (!booking) {
+      booking = inMemoryBookingsMap.get(id);
+    }
+
     if (!booking) {
       res.status(404).json({ success: false, message: 'Booking not found.' });
       return;

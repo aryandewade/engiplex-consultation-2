@@ -20,10 +20,24 @@ export const apiRequest = async <T = any>(
     headers,
   });
 
-  const data = await response.json().catch(() => ({
-    success: false,
-    message: 'An unexpected response was received from the server.',
-  }));
+  let data: any;
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to parse JSON response from server.',
+    }));
+  } else {
+    const rawText = await response.text().catch(() => '');
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = {
+        success: response.ok,
+        message: rawText || (response.ok ? 'Success' : `Server responded with status ${response.status}`),
+      };
+    }
+  }
 
   if (!response.ok || data.success === false) {
     const errorMsg = data.message || `Request failed with status ${response.status}`;

@@ -33,7 +33,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onNavigate }) => {
       {/* Back button */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => onNavigate('/consultants')}
+          onClick={() => onNavigate('/')}
           className="inline-flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-zinc-900 hover:underline cursor-pointer transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -570,11 +570,11 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onNavigate }) => {
       {/* Back to top / home button */}
       <div className="flex justify-center pt-4">
         <button
-          onClick={() => onNavigate('/consultants')}
+          onClick={() => onNavigate('/')}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Return to Homepage</span>
+          <span>Back to Home</span>
         </button>
       </div>
 

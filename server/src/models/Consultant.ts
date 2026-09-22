@@ -20,6 +20,7 @@ export interface IConsultant extends Document {
     start: string; // "09:00"
     end: string;   // "18:00"
   };
+  meetingLink?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,7 @@ const ConsultantSchema = new Schema<IConsultant>(
       start: { type: String, default: '09:00' },
       end: { type: String, default: '18:00' },
     },
+    meetingLink: { type: String, default: 'https://meet.google.com/ioy-bouu-eih' },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true }

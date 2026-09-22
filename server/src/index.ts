@@ -197,10 +197,10 @@ app.use(errorHandler);
 
 const PORT = parseInt(ENV.PORT, 10) || 5000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 ConsultFlow Server running on http://127.0.0.1:${PORT}`);
-  console.log(`📡 Health check: http://127.0.0.1:${PORT}/api/health`);
+  console.log(`🚀 ConsultFlow Server running on port ${PORT}`);
+  console.log(`📡 Health check: /api/health`);
   console.log(`======================================================\n`);
 });
 

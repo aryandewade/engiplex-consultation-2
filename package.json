@@ -4,9 +4,8 @@
   "private": true,
   "description": "Production-grade consultancy and mentor booking platform for ENGIPLEX",
   "scripts": {
-    "build": "cd client && bun run build && cd ../server && bun run build",
-    "build:npm": "npm run build --prefix client && npm run build --prefix server",
-    "start": "node server/dist/index.js",
+    "build": "cd server && npm install",
+    "start": "cd server && npm start",
     "dev": "npm run client",
     "dev:all": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd server && bun run dev",

@@ -5,7 +5,6 @@ import bcrypt from 'bcryptjs';
 import { ENV } from './config/env';
 import { connectDB } from './config/db';
 import { errorHandler } from './middleware/errorHandler';
-// Connected to new MongoDB Atlas cluster (cluster0.pxpeum4.mongodb.net)
 
 // Route imports
 import authRoutes from './routes/authRoutes';
